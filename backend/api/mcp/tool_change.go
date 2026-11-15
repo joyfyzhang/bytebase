@@ -555,12 +555,18 @@ func checkAPIResponse(resp *apiResponse, operation, permission string) error {
 		// chain answers the same status for the method class, the ceiling, the
 		// request's own shape and the masked-write guard. No grant lifts a
 		// workspace setting, so those keep their own remedy and get no advice.
+		// The ACL refusal names the permission itself, so its message stands
+		// alone without a grant suggestion.
 		message := parseError(resp.Body)
 		if IsPolicyRefusal(message) {
 			return &toolError{Code: "PERMISSION_DENIED", Message: message}
 		}
 		if message == "" {
-			message = fmt.Sprintf("you don't have permission to %s", operation)
+			message = fmt.Sprintf("you don't have permission to %s, which requires %s", operation, permission)
+			return &toolError{Code: "PERMISSION_DENIED", Message: message}
+		}
+		if strings.Contains(message, permission) || strings.Contains(message, `"bb.`) {
+			return &toolError{Code: "PERMISSION_DENIED", Message: message}
 		}
 		return &toolError{
 			Code:       "PERMISSION_DENIED",
